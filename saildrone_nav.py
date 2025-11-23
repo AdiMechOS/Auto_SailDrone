@@ -19,9 +19,9 @@ def saildrone_aero(v_drone, theta, B_sail):
         return np.array([0.0, 0.0]), 0.0 #if apparent wind is zero, no force is experienced
 
     #convert apparent wind vector relative to a b axis (drones heading) from x y axis: compute angle of attack of the drone
-    Rmatrix = np.array([[np.cos(theta), np.sin(theta)],
-                  [-np.sin(theta), np.cos(theta)]])
-    v_appWind_body = np.matmul(Rmatrix, v_appWind)
+    Rmatrix = np.array([[np.cos(theta), -np.sin(theta)],
+                        [np.sin(theta), np.cos(theta)]])
+    v_appWind_body = np.matmul(np.transpose(Rmatrix), v_appWind)
 
     alpha = B_sail - np.arctan2(v_appWind_body[1], v_appWind_body[0])  #calculating angle of attack (alpha) between sail and direction of apparent wind 
 
@@ -35,7 +35,7 @@ def saildrone_aero(v_drone, theta, B_sail):
     #CD because drag acts along the flow direction (resisting motion).
     #CL because lift is perpendicular to the flow direction (side force from the sail).
 
-    F_total = np.matmul(np.transpose(Rmatrix),F_body) #transfrom matrix back 
+    F_total = np.matmul(Rmatrix,F_body) #transfrom matrix back 
     
     torque = F_body[1] * sail_offset #torque due to sail offset
 
@@ -52,6 +52,7 @@ def saildrone_ODE(t, z):
 
     F_sail, torque_sail = saildrone_aero(v_drone, theta, B_sail)
     F_hydro, torque_hydro = get_vals(v_drone, theta, gamma, B_rudder)
+
 
     #using newtons second law to compute accelerations due aero and hydro forces
     ax = (F_sail[0] + F_hydro[0])/M
@@ -72,7 +73,9 @@ def control_stat(t):
 
 #initialising ODE states in order [x, vx, y, vy, theta, gamma]
 z0 = [0, 0, 0, 2.9, 0, 0]
+
 t_run = (0, 100)
+
 
 #solving ODE
 sol = solve_ivp(saildrone_ODE, t_run, z0, method='RK45')
@@ -86,12 +89,14 @@ pathA = 0
 pathB = np.searchsorted(sol.t, 60)
 pathC = np.searchsorted(sol.t, 65)
 
-plt.scatter(sol.y[0][pathA], sol.y[2][pathA], c='b', marker='o', label = 'A (Northward Travel)')
-plt.scatter(sol.y[0][pathB], sol.y[2][pathB], c='r', marker='o', label = 'B (Clockwise Turn)')
-plt.scatter(sol.y[0][pathC], sol.y[2][pathC], c='b', marker='o', label = 'C (Upwind Travel)')
+plt.scatter(sol.y[0][pathA], sol.y[2][pathA], c='g', marker='o', label = 'A (Northward Travel)')
+plt.scatter(sol.y[0][pathB], sol.y[2][pathB], c='#ffd343', marker='o', label = 'B (Clockwise Turn)')
+plt.scatter(sol.y[0][pathC], sol.y[2][pathC], c='r', marker='o', label = 'C (Upwind Travel)')
 
 plt.xlabel('x, East (m)')
 plt.ylabel('y, North (m)')
+plt.gca().invert_yaxis()
+plt.gca().invert_xaxis()
 plt.title('Saildrone course path')
 plt.grid(True)
 plt.axis('equal')
